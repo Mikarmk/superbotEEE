@@ -23,6 +23,7 @@ def get_main_menu_keyboard() -> telebot.types.ReplyKeyboardMarkup:
     keyboard.add(*buttons)
     return keyboard
 
+
 @bot.message_handler(commands=['start'])
 def start_command(message: telebot.types.Message) -> NoReturn:
     # Create a personal folder for the user
@@ -47,6 +48,10 @@ def show_user_files(message: telebot.types.Message) -> NoReturn:
         for file_type, file_id, timestamp in files:
             response += f"Тип: {file_type}\nID: {file_id}\nВремя: {timestamp}\n\n"
         bot.send_message(message.chat.id, response)
+
+@bot.message_handler(content_types=['text'])
+def echo_message(message: telebot.types.Message) -> NoReturn:
+    bot.send_message(message.chat.id, message.text)
 
 @bot.message_handler(content_types=['document', 'photo', 'audio', 'video'])
 def handle_files(message: telebot.types.Message) -> NoReturn:
