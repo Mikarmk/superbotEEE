@@ -83,6 +83,48 @@ def save_file_info(user_id: int, username: str, file_type: str, file_id: str) ->
 def save_file_info_to_database(user_id: int, file_type: str, file_name: str) -> None:
     pass
 
+@bot.message_handler(content_types=['document', 'photo', 'audio', 'video', 'animation', 'sticker'])
+def handle_files(message: telebot.types.Message) -> NoReturn:
+    file_type = message.content_type
+    if file_type == 'document':
+        file_id = message.document.file_id
+    elif file_type == 'photo':
+        file_id = message.photo[-1].file_id
+    elif file_type == 'audio':
+        file_id = message.audio.file_id
+    elif file_type == 'video':
+        file_id = message.video.file_id
+    elif file_type == 'animation':
+        file_id = message.animation.file_id
+    elif file_type == 'sticker':
+        bot.send_message(message.chat.id, "Классный стикер!")
+        return
+    else:
+        return
+
+    save_file_info(message.chat.id, message.chat.username, file_type, file_id)
+    bot.send_message(message.chat.id, "Это файл")
+
+def save_file_info(user_id: int, username: str, file_type: str, file_id: str) -> None:
+    # Получение информации о файле
+    file_info = bot.get_file(file_id)
+    file_path = file_info.file_path
+
+    # Скачивание файла
+    downloaded_file = bot.download_file(file_path)
+
+    # Определение пути для сохранения файла на сервере
+    file_extension = os.path.splitext(file_path)[1]
+    file_name = f"{file_id}{file_extension}"
+    file_save_path = f"files/{username}/{file_name}"
+
+    # Сохранение файла на сервере
+    with open(file_save_path, 'wb') as new_file:
+        new_file.write(downloaded_file)
+
+    # Сохранение информации о файле в базе данных
+    save_file_info_to_database(user_id, file_type, file_name)
+
 @bot.message_handler(commands=['files'])
 def show_user_files(message: telebot.types.Message) -> NoReturn:
     user_folder = f"files/{message.chat.username}"
@@ -96,21 +138,21 @@ def show_user_files(message: telebot.types.Message) -> NoReturn:
     else:
         for file_name in files:
             file_path = os.path.join(user_folder, file_name)
-            with open(file_path, 'rb') as file:
-                if file_name.endswith('.doc') or file_name.endswith('.docx'):
-                    bot.send_document(message.chat.id, file)
-                elif file_name.endswith('.jpg') or file_name.endswith('.png'):
-                    bot.send_photo(message.chat.id, file)
-                elif file_name.endswith('.mp3') or file_name.endswith('.wav'):
-                    bot.send_audio(message.chat.id, file)
-                elif file_name.endswith('.mp4') or file_name.endswith('.avi'):
-                    bot.send_video(message.chat.id, file)
-                else:
-                    bot.send_document(message.chat.id, file)
-
-
-
-
+            if file_name.endswith('.jpg') or file_name.endswith('.png'):
+                with open(file_path, 'rb') as photo_file:
+                    bot.send_photo(message.chat.id, photo_file)
+            elif file_name.endswith('.mp3') or file_name.endswith('.wav'):
+                with open(file_path, 'rb') as audio_file:
+                    bot.send_audio(message.chat.id, audio_file)
+            elif file_name.endswith('.mp4') or file_name.endswith('.avi'):
+                with open(file_path, 'rb') as video_file:
+                    bot.send_video(message.chat.id, video_file)
+            elif file_name.endswith('.gif'):
+                with open(file_path, 'rb') as gif_file:
+                    bot.send_animation(message.chat.id, gif_file)
+            else:
+                with open(file_path, 'rb') as document_file:
+                    bot.send_document(message.chat.id, document_file)
 
 
 if __name__ == '__main__':
